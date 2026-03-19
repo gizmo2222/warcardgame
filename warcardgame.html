@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>War - Card Game</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1a4a2e;
+      font-family: 'Georgia', serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Felt texture overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        repeating-linear-gradient(45deg, rgba(0,0,0,0.03) 0px, rgba(0,0,0,0.03) 1px, transparent 1px, transparent 8px),
+        repeating-linear-gradient(-45deg, rgba(0,0,0,0.03) 0px, rgba(0,0,0,0.03) 1px, transparent 1px, transparent 8px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .table {
+      position: relative;
+      z-index: 1;
+      width: min(700px, 96vw);
+      background: radial-gradient(ellipse at center, #2d7a4a 0%, #1e5c36 60%, #154a2a 100%);
+      border-radius: 120px;
+      border: 14px solid #7a4a1a;
+      box-shadow:
+        0 0 0 4px #5a3210,
+        0 0 0 8px #9a6228,
+        0 20px 60px rgba(0,0,0,0.7),
+        inset 0 0 80px rgba(0,0,0,0.3);
+      padding: 40px 50px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      min-height: 580px;
+    }
+
+    /* Gold rail line */
+    .table::after {
+      content: '';
+      position: absolute;
+      inset: 10px;
+      border-radius: 110px;
+      border: 2px solid rgba(180,140,60,0.3);
+      pointer-events: none;
+    }
+
+    h1 {
+      text-align: center;
+      color: #e8d5a0;
+      font-size: 2rem;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .scores {
+      display: flex;
+      justify-content: space-between;
+      color: #c8b878;
+      font-size: 0.9rem;
+      padding: 0 10px;
+    }
+
+    .score-label { font-weight: bold; letter-spacing: 1px; }
+    .score-count { color: #f0e0a0; }
+
+    /* Play area */
+    .play-area {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      flex: 1;
+      gap: 10px;
+    }
+
+    .player-zone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+    }
+
+    .player-label {
+      color: #c8b878;
+      font-size: 0.85rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    /* Card stacks */
+    .card-stack {
+      position: relative;
+      width: 80px;
+      height: 112px;
+    }
+
+    .stack-shadow {
+      position: absolute;
+      width: 80px;
+      height: 112px;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.4);
+      top: 4px;
+      left: 4px;
+    }
+
+    .stack-back {
+      position: absolute;
+      width: 80px;
+      height: 112px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #1a237e, #283593);
+      border: 2px solid #5c6bc0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,0.15);
+      font-size: 1.5rem;
+    }
+
+    .stack-back::before {
+      content: '';
+      position: absolute;
+      inset: 6px;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 4px;
+      background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 4px,
+        rgba(255,255,255,0.03) 4px,
+        rgba(255,255,255,0.03) 8px
+      );
+    }
+
+    .stack-count {
+      position: absolute;
+      bottom: -24px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #c8b878;
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+
+    /* Flipped cards in center */
+    .center-zone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      min-width: 100px;
+    }
+
+    .flipped-cards {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .card {
+      width: 80px;
+      height: 112px;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid #ccc;
+      box-shadow: 2px 4px 12px rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 6px;
+      font-family: 'Georgia', serif;
+      position: relative;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card.winner-glow {
+      box-shadow: 0 0 20px 6px #ffd700, 2px 4px 12px rgba(0,0,0,0.4);
+      transform: scale(1.08) translateY(-4px);
+    }
+
+    .card.loser-dim {
+      opacity: 0.5;
+    }
+
+    .card .corner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      line-height: 1.1;
+      font-size: 0.85rem;
+      font-weight: bold;
+    }
+
+    .card .corner.bottom {
+      transform: rotate(180deg);
+    }
+
+    .card .suit-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.8rem;
+    }
+
+    .red { color: #c0392b; }
+    .black { color: #1a1a2e; }
+
+    /* Empty card placeholder */
+    .card-empty {
+      width: 80px;
+      height: 112px;
+      border-radius: 8px;
+      border: 2px dashed rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,0.15);
+      font-size: 0.7rem;
+      letter-spacing: 1px;
+    }
+
+    /* War pile */
+    .war-pile {
+      display: flex;
+      gap: 4px;
+      min-height: 30px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .war-card-back {
+      width: 22px;
+      height: 30px;
+      border-radius: 3px;
+      background: linear-gradient(135deg, #1a237e, #283593);
+      border: 1px solid #5c6bc0;
+      box-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+    }
+
+    /* Message */
+    .message-bar {
+      text-align: center;
+      min-height: 28px;
+      font-size: 1rem;
+      color: #f0e0a0;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+      letter-spacing: 1px;
+    }
+
+    .message-bar .war-text {
+      color: #ff6b6b;
+      font-size: 1.2rem;
+      font-weight: bold;
+      text-shadow: 0 0 10px rgba(255,100,100,0.5);
+      animation: pulse 0.5s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { transform: scale(1); }
+      to { transform: scale(1.08); }
+    }
+
+    /* Buttons */
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    button {
+      padding: 10px 28px;
+      border: none;
+      border-radius: 6px;
+      font-family: 'Georgia', serif;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      letter-spacing: 1px;
+    }
+
+    #btn-flip {
+      background: linear-gradient(to bottom, #e8c84a, #c8a428);
+      color: #2a1a00;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+      font-weight: bold;
+    }
+
+    #btn-flip:hover:not(:disabled) {
+      background: linear-gradient(to bottom, #f0d860, #d8b438);
+      transform: translateY(-1px);
+      box-shadow: 0 5px 12px rgba(0,0,0,0.4);
+    }
+
+    #btn-flip:active:not(:disabled) {
+      transform: translateY(1px);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+
+    #btn-flip:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #btn-new {
+      background: linear-gradient(to bottom, #555, #333);
+      color: #ddd;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+    }
+
+    #btn-new:hover {
+      background: linear-gradient(to bottom, #666, #444);
+      transform: translateY(-1px);
+    }
+
+    /* Game over overlay */
+    .game-over {
+      position: absolute;
+      inset: 0;
+      border-radius: 106px;
+      background: rgba(0,0,0,0.78);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 10;
+    }
+
+    .game-over h2 {
+      color: #ffd700;
+      font-size: 2.2rem;
+      text-shadow: 0 0 20px rgba(255,215,0,0.6);
+      letter-spacing: 4px;
+    }
+
+    .game-over p {
+      color: #c8b878;
+      font-size: 1rem;
+      letter-spacing: 2px;
+    }
+
+    .game-over button {
+      margin-top: 8px;
+      padding: 12px 36px;
+      background: linear-gradient(to bottom, #e8c84a, #c8a428);
+      color: #2a1a00;
+      font-weight: bold;
+      font-size: 1rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    /* Auto-play controls */
+    .auto-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    #btn-auto {
+      background: linear-gradient(to bottom, #4a7a3a, #2e5a28);
+      color: #d0e8c0;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+      padding: 8px 20px;
+      font-size: 0.85rem;
+    }
+
+    #btn-auto:hover {
+      background: linear-gradient(to bottom, #5a8a4a, #3e6a38);
+      transform: translateY(-1px);
+    }
+
+    #btn-auto.active {
+      background: linear-gradient(to bottom, #7a3a2e, #5a2818);
+      color: #f0c0a0;
+    }
+
+    .speed-label {
+      color: #a0c088;
+      font-size: 0.78rem;
+      letter-spacing: 1px;
+    }
+
+    input[type=range] {
+      width: 80px;
+      accent-color: #c8a428;
+    }
+  </style>
+</head>
+<body>
+<div class="table" id="table">
+
+  <h1>War</h1>
+
+  <div class="scores">
+    <div><span class="score-label">YOU</span> &nbsp;<span class="score-count" id="p1-count">26</span> cards</div>
+    <div>Round <span class="score-count" id="round-num">0</span></div>
+    <div><span class="score-count" id="p2-count">26</span> cards &nbsp;<span class="score-label">CPU</span></div>
+  </div>
+
+  <div class="play-area">
+
+    <!-- Player 1 -->
+    <div class="player-zone">
+      <div class="player-label">You</div>
+      <div class="card-stack" id="p1-stack">
+        <div class="stack-shadow"></div>
+        <div class="stack-back"></div>
+        <div class="stack-count" id="p1-stack-label">26 left</div>
+      </div>
+    </div>
+
+    <!-- Center -->
+    <div class="center-zone">
+      <div class="flipped-cards">
+        <div id="p1-card-slot"><div class="card-empty">flip</div></div>
+        <div id="p2-card-slot"><div class="card-empty">flip</div></div>
+      </div>
+      <div class="war-pile" id="war-pile"></div>
+      <div class="message-bar" id="message">Press <em>Flip</em> to deal!</div>
+    </div>
+
+    <!-- CPU -->
+    <div class="player-zone">
+      <div class="player-label">CPU</div>
+      <div class="card-stack" id="p2-stack">
+        <div class="stack-shadow"></div>
+        <div class="stack-back"></div>
+        <div class="stack-count" id="p2-stack-label">26 left</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="controls">
+    <button id="btn-flip">Flip Cards</button>
+    <button id="btn-new">New Game</button>
+  </div>
+
+  <div class="auto-row">
+    <button id="btn-auto">Auto Play</button>
+    <span class="speed-label">Speed</span>
+    <input type="range" id="speed-slider" min="1" max="10" value="5">
+  </div>
+
+  <!-- Game over overlay (hidden) -->
+  <div class="game-over" id="game-over" style="display:none">
+    <h2 id="go-title">YOU WIN!</h2>
+    <p id="go-subtitle">Completed in <span id="go-rounds">0</span> rounds</p>
+    <button onclick="newGame()">Play Again</button>
+  </div>
+
+</div>
+
+<script>
+  // ── Deck setup ──────────────────────────────────────────────────────────────
+  const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+  const SUITS = ['♠','♥','♦','♣'];
+  const RANK_VAL = Object.fromEntries(RANKS.map((r, i) => [r, i + 2]));
+  const RED_SUITS = new Set(['♥','♦']);
+
+  function makeDeck() {
+    const deck = [];
+    for (const suit of SUITS)
+      for (const rank of RANKS)
+        deck.push({ rank, suit, val: RANK_VAL[rank] });
+    return deck;
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  // ── State ───────────────────────────────────────────────────────────────────
+  let p1 = [], p2 = [], round = 0;
+  let autoInterval = null;
+
+  function newGame() {
+    const deck = shuffle(makeDeck());
+    p1 = deck.slice(0, 26);
+    p2 = deck.slice(26);
+    round = 0;
+    document.getElementById('game-over').style.display = 'none';
+    document.getElementById('btn-flip').disabled = false;
+    clearSlots();
+    clearWarPile();
+    updateCounts();
+    setMessage('Press <em>Flip</em> to deal!');
+    stopAuto();
+  }
+
+  // ── Card rendering ───────────────────────────────────────────────────────────
+  function cardHTML(card, extraClass = '') {
+    const color = RED_SUITS.has(card.suit) ? 'red' : 'black';
+    return `
+      <div class="card ${extraClass}">
+        <div class="corner ${color}">
+          <span>${card.rank}</span>
+          <span>${card.suit}</span>
+        </div>
+        <div class="suit-center ${color}">${card.suit}</div>
+        <div class="corner bottom ${color}">
+          <span>${card.rank}</span>
+          <span>${card.suit}</span>
+        </div>
+      </div>`;
+  }
+
+  function clearSlots() {
+    document.getElementById('p1-card-slot').innerHTML = '<div class="card-empty">flip</div>';
+    document.getElementById('p2-card-slot').innerHTML = '<div class="card-empty">flip</div>';
+  }
+
+  function clearWarPile() {
+    document.getElementById('war-pile').innerHTML = '';
+  }
+
+  function updateCounts() {
+    document.getElementById('p1-count').textContent = p1.length;
+    document.getElementById('p2-count').textContent = p2.length;
+    document.getElementById('p1-stack-label').textContent = p1.length + ' left';
+    document.getElementById('p2-stack-label').textContent = p2.length + ' left';
+    document.getElementById('round-num').textContent = round;
+
+    // Hide/show stack visuals
+    document.getElementById('p1-stack').style.visibility = p1.length > 0 ? 'visible' : 'hidden';
+    document.getElementById('p2-stack').style.visibility = p2.length > 0 ? 'visible' : 'hidden';
+  }
+
+  function setMessage(html) {
+    document.getElementById('message').innerHTML = html;
+  }
+
+  // ── War pile display ─────────────────────────────────────────────────────────
+  function showWarPile(count) {
+    const pile = document.getElementById('war-pile');
+    pile.innerHTML = '';
+    for (let i = 0; i < Math.min(count, 12); i++) {
+      const d = document.createElement('div');
+      d.className = 'war-card-back';
+      pile.appendChild(d);
+    }
+    if (count > 12) {
+      const d = document.createElement('div');
+      d.style.cssText = 'color:rgba(255,255,255,0.4);font-size:0.65rem;align-self:center;';
+      d.textContent = `+${count - 12}`;
+      pile.appendChild(d);
+    }
+  }
+
+  // ── Core flip logic ──────────────────────────────────────────────────────────
+  function flip() {
+    if (p1.length === 0 || p2.length === 0) return;
+    document.getElementById('btn-flip').disabled = true;
+
+    round++;
+    updateCounts();
+
+    const pot = [];   // cards up for grabs this round (may grow with WAR)
+
+    function battle() {
+      if (p1.length === 0 || p2.length === 0) {
+        endGame();
+        return;
+      }
+
+      const c1 = p1.shift();
+      const c2 = p2.shift();
+      pot.push(c1, c2);
+
+      // Show flipped cards
+      document.getElementById('p1-card-slot').innerHTML = cardHTML(c1);
+      document.getElementById('p2-card-slot').innerHTML = cardHTML(c2);
+      updateCounts();
+
+      if (c1.val > c2.val) {
+        // P1 wins
+        document.getElementById('p1-card-slot').querySelector('.card').classList.add('winner-glow');
+        document.getElementById('p2-card-slot').querySelector('.card').classList.add('loser-dim');
+        clearWarPile();
+        setMessage(`<strong>You win</strong> this round! +${pot.length} cards`);
+        shuffle(pot);
+        p1.push(...pot);
+        updateCounts();
+        document.getElementById('btn-flip').disabled = false;
+      } else if (c2.val > c1.val) {
+        // P2 wins
+        document.getElementById('p2-card-slot').querySelector('.card').classList.add('winner-glow');
+        document.getElementById('p1-card-slot').querySelector('.card').classList.add('loser-dim');
+        clearWarPile();
+        setMessage(`<strong>CPU wins</strong> this round! +${pot.length} cards`);
+        shuffle(pot);
+        p2.push(...pot);
+        updateCounts();
+        document.getElementById('btn-flip').disabled = false;
+      } else {
+        // WAR
+        const warCount = Math.min(3, p1.length, p2.length);
+        for (let i = 0; i < warCount; i++) {
+          if (p1.length > 0) pot.push(p1.shift());
+          if (p2.length > 0) pot.push(p2.shift());
+        }
+        showWarPile(pot.length - 2); // show hidden war cards (exclude the 2 face-up)
+        setMessage('<span class="war-text">⚔ WAR! ⚔</span>');
+        updateCounts();
+
+        if (p1.length === 0 || p2.length === 0) {
+          // Someone ran out during war — tie-break on current cards
+          endGame();
+          return;
+        }
+
+        // Next battle after short delay
+        setTimeout(battle, speedDelay());
+      }
+    }
+
+    battle();
+  }
+
+  function speedDelay() {
+    const v = parseInt(document.getElementById('speed-slider').value);
+    return Math.round(1200 / v);
+  }
+
+  function endGame() {
+    stopAuto();
+    document.getElementById('btn-flip').disabled = true;
+    const title = p1.length >= p2.length ? 'YOU WIN!' : 'CPU WINS!';
+    document.getElementById('go-title').textContent = title;
+    document.getElementById('go-rounds').textContent = round;
+    document.getElementById('game-over').style.display = 'flex';
+  }
+
+  // ── Auto play ────────────────────────────────────────────────────────────────
+  function toggleAuto() {
+    if (autoInterval) {
+      stopAuto();
+    } else {
+      startAuto();
+    }
+  }
+
+  function startAuto() {
+    const btn = document.getElementById('btn-auto');
+    btn.textContent = 'Stop Auto';
+    btn.classList.add('active');
+    document.getElementById('btn-flip').disabled = true;
+
+    function step() {
+      if (p1.length === 0 || p2.length === 0) { stopAuto(); return; }
+      flip();
+      autoInterval = setTimeout(step, speedDelay() + 400);
+    }
+    step();
+  }
+
+  function stopAuto() {
+    if (autoInterval) { clearTimeout(autoInterval); autoInterval = null; }
+    const btn = document.getElementById('btn-auto');
+    btn.textContent = 'Auto Play';
+    btn.classList.remove('active');
+    if (p1.length > 0 && p2.length > 0)
+      document.getElementById('btn-flip').disabled = false;
+  }
+
+  // ── Events ───────────────────────────────────────────────────────────────────
+  document.getElementById('btn-flip').addEventListener('click', flip);
+  document.getElementById('btn-new').addEventListener('click', newGame);
+  document.getElementById('btn-auto').addEventListener('click', toggleAuto);
+
+  // ── Init ─────────────────────────────────────────────────────────────────────
+  newGame();
+</script>
+</body>
+</html>
