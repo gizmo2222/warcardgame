@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>War - Card Game</title>
+  <link rel="icon" href="data:,">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -533,7 +534,7 @@
   <!-- Game over overlay (hidden) -->
   <div class="game-over" id="game-over" role="dialog" aria-modal="true" aria-labelledby="go-title" aria-describedby="go-subtitle" style="display:none">
     <h2 id="go-title">YOU WIN!</h2>
-    <p id="go-subtitle">Completed in <span id="go-rounds">0</span> rounds</p>
+    <p id="go-subtitle">Completed in <span id="go-rounds">0</span> <span id="go-rounds-word">rounds</span></p>
     <button id="btn-again">Play Again</button>
   </div>
 
@@ -745,6 +746,7 @@
     const title = p1.length === p2.length ? "IT'S A DRAW" : p1.length > p2.length ? 'YOU WIN!' : 'CPU WINS!';
     document.getElementById('go-title').textContent = title;
     document.getElementById('go-rounds').textContent = round;
+    document.getElementById('go-rounds-word').textContent = round === 1 ? 'round' : 'rounds';
     showGameOver(true);
   }
 
