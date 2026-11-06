@@ -321,18 +321,18 @@
       font-weight: bold;
     }
 
-    #btn-flip:hover:not(:disabled) {
+    #btn-flip:hover:not([aria-disabled="true"]) {
       background: linear-gradient(to bottom, #f0d860, #d8b438);
       transform: translateY(-1px);
       box-shadow: 0 5px 12px rgba(0,0,0,0.4);
     }
 
-    #btn-flip:active:not(:disabled) {
+    #btn-flip:active:not([aria-disabled="true"]) {
       transform: translateY(1px);
       box-shadow: 0 1px 4px rgba(0,0,0,0.4);
     }
 
-    #btn-flip:disabled {
+    #btn-flip[aria-disabled="true"] {
       opacity: 0.5;
       cursor: not-allowed;
     }
@@ -578,7 +578,8 @@
   }
 
   function updateButtons() {
-    document.getElementById('btn-flip').disabled = busy || over || auto;
+    // aria-disabled, not disabled: a disabled button drops keyboard focus to <body> mid-war
+    document.getElementById('btn-flip').setAttribute('aria-disabled', String(busy || over || auto));
     const btn = document.getElementById('btn-auto');
     btn.disabled = over;
     btn.textContent = auto ? 'Stop Auto' : 'Auto Play';
@@ -734,7 +735,7 @@
   }
 
   // ── Events ───────────────────────────────────────────────────────────────────
-  document.getElementById('btn-flip').addEventListener('click', flip);
+  document.getElementById('btn-flip').addEventListener('click', () => { if (!auto) flip(); });
   document.getElementById('btn-new').addEventListener('click', newGame);
   document.getElementById('btn-auto').addEventListener('click', toggleAuto);
 
