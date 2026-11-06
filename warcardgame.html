@@ -253,6 +253,11 @@
       letter-spacing: 1px;
     }
 
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; overflow: hidden;
+      clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+    }
+
     /* War pile */
     .war-pile {
       display: flex;
@@ -489,11 +494,11 @@
     <!-- Center -->
     <div class="center-zone">
       <div class="flipped-cards">
-        <div id="p1-card-slot"><div class="card-empty">flip</div></div>
-        <div id="p2-card-slot"><div class="card-empty">flip</div></div>
+        <div id="p1-card-slot"><div class="card-empty" aria-hidden="true">flip</div></div>
+        <div id="p2-card-slot"><div class="card-empty" aria-hidden="true">flip</div></div>
       </div>
-      <div class="war-pile" id="war-pile"></div>
-      <div class="message-bar" id="message">Press <em>Flip</em> to deal!</div>
+      <div class="war-pile" id="war-pile" aria-hidden="true"></div>
+      <div class="message-bar" id="message" role="status" aria-atomic="true">Press <em>Flip</em> to deal!</div>
     </div>
 
     <!-- CPU -->
@@ -515,7 +520,7 @@
 
   <div class="auto-row">
     <button id="btn-auto">Auto Play</button>
-    <span class="speed-label">Speed</span>
+    <label class="speed-label" for="speed-slider">Speed</label>
     <input type="range" id="speed-slider" min="1" max="10" value="5">
   </div>
 
@@ -534,6 +539,9 @@
   const SUITS = ['♠','♥','♦','♣'];
   const RANK_VAL = Object.fromEntries(RANKS.map((r, i) => [r, i + 2]));
   const RED_SUITS = new Set(['♥','♦']);
+  const RANK_NAME = { J: 'Jack', Q: 'Queen', K: 'King', A: 'Ace' };
+  const SUIT_NAME = { '♠': 'spades', '♥': 'hearts', '♦': 'diamonds', '♣': 'clubs' };
+  const cardName = c => `${RANK_NAME[c.rank] || c.rank} of ${SUIT_NAME[c.suit]}`;
 
   function makeDeck() {
     const deck = [];
@@ -598,13 +606,13 @@
   function cardHTML(card, extraClass = '') {
     const color = RED_SUITS.has(card.suit) ? 'red' : 'black';
     return `
-      <div class="card ${extraClass}">
-        <div class="corner ${color}">
+      <div class="card ${extraClass}" role="img" aria-label="${cardName(card)}">
+        <div class="corner ${color}" aria-hidden="true">
           <span>${card.rank}</span>
           <span>${card.suit}</span>
         </div>
-        <div class="suit-center ${color}">${card.suit}</div>
-        <div class="corner bottom ${color}">
+        <div class="suit-center ${color}" aria-hidden="true">${card.suit}</div>
+        <div class="corner bottom ${color}" aria-hidden="true">
           <span>${card.rank}</span>
           <span>${card.suit}</span>
         </div>
@@ -612,8 +620,8 @@
   }
 
   function clearSlots() {
-    document.getElementById('p1-card-slot').innerHTML = '<div class="card-empty">flip</div>';
-    document.getElementById('p2-card-slot').innerHTML = '<div class="card-empty">flip</div>';
+    document.getElementById('p1-card-slot').innerHTML = '<div class="card-empty" aria-hidden="true">flip</div>';
+    document.getElementById('p2-card-slot').innerHTML = '<div class="card-empty" aria-hidden="true">flip</div>';
   }
 
   function clearWarPile() {
@@ -672,12 +680,14 @@
     document.getElementById('p1-card-slot').innerHTML = cardHTML(c1);
     document.getElementById('p2-card-slot').innerHTML = cardHTML(c2);
     updateCounts();
+    // Screen readers hear which cards were played along with the result
+    const played = `<span class="sr-only">You: ${cardName(c1)}. CPU: ${cardName(c2)}. </span>`;
 
     if (c1.val !== c2.val) {
       const youWin = c1.val > c2.val;
       document.querySelector(`#${youWin ? 'p1' : 'p2'}-card-slot .card`).classList.add('winner-glow');
       document.querySelector(`#${youWin ? 'p2' : 'p1'}-card-slot .card`).classList.add('loser-dim');
-      setMessage(`<strong>${youWin ? 'You win' : 'CPU wins'}</strong> this round! +${pot.length} cards`);
+      setMessage(played + `<strong>${youWin ? 'You win' : 'CPU wins'}</strong> this round! +${pot.length} cards`);
       (youWin ? p1 : p2).push(...shuffle(pot));
       finishRound();
       return;
@@ -686,11 +696,11 @@
     // WAR — a player with no card left to flip can't fight and loses the pot
     if (p1.length === 0 || p2.length === 0) {
       if (p1.length === 0 && p2.length === 0) {
-        setMessage('Both players are out of cards!');
+        setMessage(played + 'Both players are out of cards!');
       } else {
         const youWin = p2.length === 0;
         (youWin ? p1 : p2).push(...pot);
-        setMessage(`<strong>${youWin ? 'CPU' : 'You'}</strong> can't fight the war!`);
+        setMessage(played + `<strong>${youWin ? 'CPU' : 'You'}</strong> can't fight the war!`);
       }
       finishRound();
       return;
@@ -700,7 +710,7 @@
     pot.push(...p1.splice(0, Math.min(3, p1.length - 1)));
     pot.push(...p2.splice(0, Math.min(3, p2.length - 1)));
     showWarPile(pot.length - 2); // everything in the pot except the 2 face-up cards
-    setMessage('<span class="war-text">⚔ WAR! ⚔</span>');
+    setMessage(played + '<span class="war-text"><span aria-hidden="true">⚔ </span>WAR!<span aria-hidden="true"> ⚔</span></span>');
     updateCounts();
     schedule(() => battle(pot), speedDelay());
   }
