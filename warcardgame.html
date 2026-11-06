@@ -454,6 +454,13 @@
       button { padding: 10px 20px; }
       .game-over h2 { font-size: 1.7rem; }
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      .card, .message-bar .war-text { animation: none; }
+      .card, button { transition: none; }
+      .card.winner-glow { transform: none; }
+      button:hover, button:active { transform: none !important; }
+    }
   </style>
 </head>
 <body>
