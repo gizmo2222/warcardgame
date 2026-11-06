@@ -776,6 +776,10 @@
   document.getElementById('btn-new').addEventListener('click', newGame);
   document.getElementById('btn-auto').addEventListener('click', toggleAuto);
   document.getElementById('btn-again').addEventListener('click', newGame);
+  // Play Again is the dialog's only control, so Tab stays on it
+  document.getElementById('game-over').addEventListener('keydown', e => {
+    if (e.key === 'Tab') { e.preventDefault(); document.getElementById('btn-again').focus(); }
+  });
 
   // ── Init ─────────────────────────────────────────────────────────────────────
   newGame();
